@@ -102,7 +102,7 @@ def extract_article(html: str, url: str) -> tuple[str, str]:
     """
     doc = Document(html)
     title = doc.short_title() or doc.title() or urlparse(url).netloc
-    body = doc.summary(html_partial=True)
+    body = doc.summary(html_partial=True, keep_all_images=True)
     return title.strip(), body
 
 
