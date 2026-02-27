@@ -21,6 +21,7 @@ from pathlib import Path
 from urllib.parse import urljoin, urlparse
 from datetime import datetime
 import io
+from tqdm import tqdm
 
 import requests
 from bs4 import BeautifulSoup, Comment
@@ -481,26 +482,27 @@ def build_epub(
     chapters: list[epub.EpubHtml] = []
     image_cache: dict[str, str] = {}
 
-    for idx, url in enumerate(urls, start=1):
-        print(f"\n[{idx}/{len(urls)}] {url}")
+    pbar = tqdm(enumerate(urls, start=1), total=len(urls), desc="Building EPUB", unit="article")
+    for idx, url in pbar:
+        tqdm.write(f"\n[{idx}/{len(urls)}] {url}")
         try:
             html, final_url = fetch_page(url, session, timeout)
         except Exception as exc:
-            print(f"  [error] fetch failed: {exc}")
+            tqdm.write(f"  [error] fetch failed: {exc}")
             continue
 
         try:
             article_title, raw_content = extract_article(html, final_url)
         except Exception as exc:
-            print(f"  [error] extraction failed: {exc}")
+            tqdm.write(f"  [error] extraction failed: {exc}")
             continue
 
-        print(f"  Title : {article_title}")
+        tqdm.write(f"  Title : {article_title}")
 
         try:
             clean = clean_html(raw_content, final_url, book, session, image_cache)
         except Exception as exc:
-            print(f"  [error] cleaning failed: {exc}")
+            tqdm.write(f"  [error] cleaning failed: {exc}")
             clean = raw_content  # fall back to unprocessed content
 
         # Store only body-level HTML — ebooklib builds the <html>/<head> wrapper.
@@ -517,7 +519,7 @@ def build_epub(
         chap.add_link(href="styles.css", rel="stylesheet", type="text/css")
         book.add_item(chap)
         chapters.append(chap)
-        print(f"  OK    ({len(clean):,} chars, {sum(1 for k, v in image_cache.items() if v.startswith('images/'))} images total so far)")
+        tqdm.write(f"  OK    ({len(clean):,} chars, {sum(1 for k, v in image_cache.items() if v.startswith('images/'))} images total so far)")
 
     if not chapters:
         print("\n[error] No chapters were successfully created.")
